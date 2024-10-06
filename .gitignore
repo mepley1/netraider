@@ -1,0 +1,16 @@
+venv*
+notes.txt
+*.pyc
+*.zip
+*.db
+*.db*
+example.py
+*.bak
+backups/
+__pycache__
+.vscode
+*-test-*
+scapy-test.py
+scanner.py
+names.txt
+launch-linux.sh
