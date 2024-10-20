@@ -314,10 +314,9 @@ def sniff_ip(stop_event=None, interface=None, lock=None) -> None:
         logging.debug(f'Dest IP: {pkt[1].dst} / Dest MAC {pkt[0].dst}')
         # Save source and dest devices to db, if both local.
         # Try to get IP of local interface? scapy.conf.iface.ip
-        #if ipaddress.ip_address(pkt[1].src).is_private and ipaddress.ip_address(pkt[1].dst).is_private: #if both ips are local
+
         if 1==1: #testing, skipping above private check - check for is.private later instead (for each individual host).
-            #logging.debug('Hosts are local.')
-            #if pkt[0].dst != 'ff:ff:ff:ff:ff:ff':
+
             hosts = [
                 {'ip': pkt[1].src, 'mac': pkt[0].src}, #source host
                 {'ip': pkt[1].dst, 'mac': pkt[0].dst}, #dest host
@@ -327,9 +326,7 @@ def sniff_ip(stop_event=None, interface=None, lock=None) -> None:
             #src_ip = ipaddress.ip_address(pkt[1].src)
             #dst_ip = ipaddress.ip_address(pkt[1].dst)
 
-            # same as above, but as a comprehension?
             hosts_not_bcast = [host for host in hosts if host['mac'] != 'ff:ff:ff:ff:ff:ff' and ipaddress.IPv4Address(host['ip']).is_private]
-            #hosts_not_bcast = [host for host in hosts if host['mac'] != 'ff:ff:ff:ff:ff:ff']
             hosts_remote = [host for host in hosts if ipaddress.IPv4Address(host['ip']).is_global and not ipaddress.IPv4Address(host['ip']).is_multicast]
             if hosts_remote:
                 logging.info(f'Remote hosts seen: {hosts_remote}')
@@ -337,6 +334,8 @@ def sniff_ip(stop_event=None, interface=None, lock=None) -> None:
             add_to_database_by_ip(hosts_not_bcast, lock)
 
             #Check if stop_event has been set, and stop if so.
+            #NOTE 10/6/24- this isn't necessary here anymore, as this function is running once for each packet sniffed.
+            # Maybe leave it though, just for the logging.
             if stop_event:
                 if stop_event.is_set():
                     logging.info('IP sniffing finished.')
@@ -369,8 +368,6 @@ def sniff_ipv6(stop_event=None, interface=None):
             {'ip': pkt[1].dst, 'mac': pkt[0].dst}, #dest host
         ]
 
-        # same as above, but as a comprehension?
-        #hosts_not_bcast = [host for host in hosts if host['mac'] != 'ff:ff:ff:ff:ff:ff' and ipaddress.IPv6Address(host['ip']).is_private]
         hosts_private = [host for host in hosts if ipaddress.IPv6Address(host['ip']).is_private]
 
         # Also include host if it's in any of local prefixes, since v6 (mostly) won't be NAT'ed
@@ -384,7 +381,6 @@ def sniff_ipv6(stop_event=None, interface=None):
         #if hosts_remote:
         #    logging.info(f'Remote hosts seen: {hosts_remote}')
 
-        #add_to_database_by_ipv6(hosts_private)
         # Testing new JSON version
         logging.debug(f'hosts_private: {hosts_private}')
         add_to_database_by_ipv6_json(hosts_private)
@@ -394,6 +390,7 @@ def sniff_ipv6(stop_event=None, interface=None):
                 logging.info('IPv6 sniffing finished.')
 
     _sniff_ipv6(stop_event, interface)
+
 ## End sniffers ##
 
 def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
