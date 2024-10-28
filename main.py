@@ -25,6 +25,7 @@ lock = threading.Lock()
 
 '''
 def get_ip() -> str:
+    """ Get and return IP, by initiating a remote connection. """
     import socket
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(('1.1.1.1', 80))
@@ -221,12 +222,17 @@ class MainWindow():
         self.scan_label = ttk.Label(self.root, textvariable = self.feedback_text, font=fontn)
         self.scan_label.grid(row=7, column=1, columnspan=2, sticky='ns', padx=btn_pad, pady=btn_pad)
 
+
+        # Label for below ping target radios
+        self.ping_target_label = ttk.Label(self.root, text='Ping target option:', font=fontn)
+        self.ping_target_label.grid(row=8, column=2, sticky='wns', padx=btn_pad, pady=btn_pad)
+
         #Radios to select ping target (treeview selection OR input from text boxes)
         self.ping_target = IntVar()
-        self.ping_target_0 = ttk.Radiobutton(self.root, text='Selection', variable=self.ping_target, value=0)
+        self.ping_target_0 = ttk.Radiobutton(self.root, text='Device selection', variable=self.ping_target, value=0)
         self.ping_target_1 = ttk.Radiobutton(self.root, text='Subnet entry', variable=self.ping_target, value=1)
-        self.ping_target_0.grid(row=8, column=1, sticky='ens', padx=btn_pad, pady=btn_pad)
-        self.ping_target_1.grid(row=8, column=2, sticky='wns', padx=btn_pad, pady=btn_pad)
+        self.ping_target_0.grid(row=9, column=2, sticky='wns', padx=btn_pad, pady=btn_pad)
+        self.ping_target_1.grid(row=10, column=2, sticky='wns', padx=btn_pad, pady=btn_pad)
 
         # Button to send ping
         self.ping_button = ttk.Button(self.root, text='Ping', command = self.ping_callback)
