@@ -398,7 +398,7 @@ def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
     target_ip = target_ip
     addr_version = ipaddress.ip_address(target_ip).version
     active_ports = []
-    ports = [22, 23, 25, 69, 80, 443]
+    #ports = [22, 23, 25, 69, 80, 443] #Unused; replaced by ports_dict below
     ports_dict = {
         22: 'ssh',
         23: 'telnet',
@@ -413,6 +413,7 @@ def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
         389: 'ldap',
         443: 'https',
         445: 'smb',
+        554: 'rtsp',
         636: 'ldaps',
         3142: 'proxy', #common port for squid/apt-cacher-ng etc
         3389: 'rdp',
