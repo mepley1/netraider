@@ -270,7 +270,7 @@ class MainWindow():
 
     #TESTING
     def get_interface_selection(self, event) -> None:
-        ''' Get info of selected interface from interface_combobox. For testing/debugging. 
+        ''' Get + print info of selected interface from interface_combobox. For testing/debugging. 
         Bind to ComboboxSelected event (i.e. when an item is selected) '''
         x = self.interface_combobox.get()
         # Print selection and its IP
@@ -534,6 +534,8 @@ class MainWindow():
             _net = ipaddress.ip_network(subnet_cidr, strict=False)
         except Exception as e:
             messagebox.showerror('Error', str(e))
+            logging.error(f'{str(e)}')
+            return
 
         # Discourage IPv6 scan if attempted, but do it if sure.
         if _net.version == 6:
