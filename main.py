@@ -484,13 +484,15 @@ class MainWindow():
             case 1:
                 # Read input from subnet input Entry boxes
                 subnet_cidr = f'{self.ip_combobox.get()}/{self.netmask_spinbox.get()}'
-                # Show error if invalid subnet
+                # Validate + Show error if invalid subnet
                 try:
                     _net = ipaddress.ip_network(subnet_cidr, strict=False)
                 except Exception as e:
                     messagebox.showerror('Error', 
                     f'Subnet input is probably invalid. \n\nThe following exception occured while attempting to create an instance of ipaddress.ip_network(subnet_cidr, strict=False): \n\n{str(e)}',
                     )
+                    logging.error(f'{str(e)}')
+                    return
 
                 ip_addrs = [format(host) for host in _net.hosts()]
                 for _ in ip_addrs:
