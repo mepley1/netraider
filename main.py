@@ -162,17 +162,18 @@ class MainWindow():
         #self.device_frame = ttk.Frame(self.root)
         #self.device_frame.grid(row=0, column=0, columnspan=4, sticky='wens')
 
-        # Title image widget
-        self.title_image = PhotoImage(file='logo.png')
-        self.image_label = Label(image=self.title_image)
-        self.image_label.grid(row=0, column=0, columnspan=2, sticky='wns', padx=btn_pad, pady=btn_pad)
+        if config.SHOW_TITLE_IMAGE:
+            # Title image widget
+            self.title_image = PhotoImage(file='logo.png')
+            self.image_label = Label(image=self.title_image)
+            self.image_label.grid(row=0, column=0, columnspan=2, sticky='wns', padx=btn_pad, pady=btn_pad)
 
-        # Extended name on top right corner
-        self.subtitle_label = ttk.Label(self.root, 
-            text='Network Exploration, Tracking, and Remote Activation Interface\nwith Dark-mode for Efficient Reconnaissance',
-            font=(font_title[0], fontn[1]-2),
-            justify='right')
-        self.subtitle_label.grid(row=0, column=2, columnspan=2, sticky='ens', padx=btn_pad, pady=btn_pad)
+            # Extended name on top right corner
+            self.subtitle_label = ttk.Label(self.root, 
+                text='Network Exploration, Tracking, and Remote Activation Interface\nwith Dark-mode for Efficient Reconnaissance',
+                font=(font_title[0], fontn[1]-2),
+                justify='right')
+            self.subtitle_label.grid(row=0, column=2, columnspan=2, sticky='ens', padx=btn_pad, pady=btn_pad)
 
         # Create a tree view to display the device list
         self.tree = ttk.Treeview(self.root, show='headings')
@@ -707,10 +708,10 @@ class MainWindow():
         module when calling them, so they have a means to provide feedback. 
         Moved from scan_button_callback. 
         Args:
-        progress: Current progress.
-        total: Max progress.
-        msg: Text to display on label.
-        mode: progressbar mode- determinate/indeterminate, or "stop" to stop an indeterminate one that's been start()-ed. 
+            progress: Current progress.
+            total: Max progress.
+            msg: Text to display on label.
+            mode: progressbar mode- determinate/indeterminate, or "stop" to stop an indeterminate one that's been start()-ed. 
         '''
 
         match _mode:

@@ -10,7 +10,7 @@ import json
 from typing import List, Callable
 
 # Timeout to use with scapy, for consistency
-DEFAULT_TIMEOUT = 4
+DEFAULT_TIMEOUT = 3
 PORT_SCAN_TIMEOUT = 1
 lock = threading.Lock()
 
@@ -42,7 +42,7 @@ def arp_scan_threaded(ip_range: str, progress_callback: Callable = None, stop_ev
 
     # Update progress bar
     if progress_callback:
-        #progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'indeterminate')
+        #progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'indeterminate') #12/1/24 comment out
         progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'determinate')
 
     # Prep for multithreading the scan
@@ -78,6 +78,8 @@ def arp_scan_threaded(ip_range: str, progress_callback: Callable = None, stop_ev
 
     return results
 
+"""
+# OLD arp scan. Replaced by arp_scan_threaded() above.
 def arp_scan(ip_range, progress_callback=None) -> list:
     ''' Active ARP scan. Send an ARP request for each address in <ip_range>, and return results. '''
     
@@ -109,6 +111,7 @@ def arp_scan(ip_range, progress_callback=None) -> list:
         progress_callback(0, 0, 'Finished', 'stop')
 
     return [{'ip': client[1].psrc, 'mac': client[1].hwsrc} for client in clients]
+"""
 
 def ndp_scan(ipv6_prefix, progress_callback=None) -> list:
     ''' Active NDP/NS scan. Send a neighbor solicitation for each addr in <ipv6_prefix>, and return results.
@@ -154,7 +157,6 @@ def ndp_scan(ipv6_prefix, progress_callback=None) -> list:
 
     logging.info(results)
     return results
-
 
 
 def ping_host(ip_addrs: list, progress_callback=None, interface=None, stop_event=None) -> dict:
@@ -257,7 +259,7 @@ def ping_host(ip_addrs: list, progress_callback=None, interface=None, stop_event
 
 ## SNIFFERS ##
 
-def sniff_arp(stop_event, interface=None, lock=None) -> None:
+def sniff_arp(stop_event: threading.Event, interface=None, lock=None) -> None:
     ''' Sniff for ARP packets, grab any MACs + IPs seen. '''
 
     def sniff_arp(stop_event, interface):
