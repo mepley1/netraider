@@ -7,12 +7,14 @@ import sys
 import threading
 import time
 import json
+from typing import List, Callable
 
 # Timeout to use with scapy, for consistency
-DEFAULT_TIMEOUT = 5
+DEFAULT_TIMEOUT = 3
 PORT_SCAN_TIMEOUT = 1
+lock = threading.Lock()
 
-def send_arp_request(ip: str, results: list, lock, interface) -> None:
+def send_arp_request(ip: str, results: list, lock: threading.Lock, interface: str = None) -> None:
     ''' Send individual ARP request for <ip> and append any response to <results>.
     Called by below arp_scan_threaded() function. '''
     # If no interface selected, use default (whichever scapy.conf.iface returns)
@@ -30,7 +32,7 @@ def send_arp_request(ip: str, results: list, lock, interface) -> None:
         for _, packet in resp:
             results.append({'ip': packet.psrc, 'mac': packet.hwsrc})
 
-def arp_scan_threaded(ip_range, progress_callback=None, stop_event=None, interface=None) -> list:
+def arp_scan_threaded(ip_range: str, progress_callback: Callable = None, stop_event: threading.Event = None, interface = None) -> List[dict]:
     '''Active ARP scan. Send an ARP request for each address in <ip_range>, and return results.'''
 
     # Determine IP addrs to scan
@@ -38,45 +40,52 @@ def arp_scan_threaded(ip_range, progress_callback=None, stop_event=None, interfa
     ip_addresses = [str(ip) for ip in ip_network.hosts()]
     num_ips = ip_network.num_addresses
 
+    # Update progress bar
     if progress_callback:
-        progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'indeterminate')
+        #progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'indeterminate') #12/1/24 comment out
+        progress_callback(0, num_ips, f'ARP scan: {ip_range} ...', 'determinate')
 
     # Prep for multithreading the scan
     results = []
-    lock = threading.Lock()
+    #lock = threading.Lock()
     threads = []
 
     # Create and start threads for each addr
-    for ip in ip_addresses:
+    #for ip in ip_addresses:
+    for idx, ip in enumerate(ip_addresses):
         arp_thread = threading.Thread(target=send_arp_request, args=(ip, results, lock, interface))
         threads.append(arp_thread)
         arp_thread.start()
 
         #Update progress bar
         if progress_callback:
-            progress_callback(len(results), num_ips, f'ARP scan: {ip_range} ...', 'indeterminate')
+            #progress_callback(len(results), num_ips, f'ARP scan: {ip_range} ...', 'indeterminate')
+            progress_callback(idx + 1, num_ips, f'ARP scan: {ip_range} ...', 'determinate')
 
         # Check for stop event
         if stop_event and stop_event.is_set():
             logging.info('Stopping ARP scan (stop event set).')
-            return
+            #return
+            break
 
     # Join threads
     for thread in threads:
         thread.join()
 
-    # Stop progress bar
+    # Stop progress bar when done
     if progress_callback:
         progress_callback(0, 0, 'Finished ARP scan.', 'stop')
 
     return results
 
+"""
+# OLD arp scan. Replaced by arp_scan_threaded() above.
 def arp_scan(ip_range, progress_callback=None) -> list:
     ''' Active ARP scan. Send an ARP request for each address in <ip_range>, and return results. '''
     
     # Update progress bar
     if progress_callback:
-            progress_callback(1, 3, 'Create ARP request...', 'determinate')
+        progress_callback(1, 3, 'Create ARP request...', 'determinate')
 
     #Create ARP request
     arp_request = scapy.ARP() 
@@ -97,12 +106,12 @@ def arp_scan(ip_range, progress_callback=None) -> list:
     for client in clients:
         logging.info(client[1].psrc + "      " + client[1].hwsrc) 
 
-
     #Stop progress bar
     if progress_callback:
         progress_callback(0, 0, 'Finished', 'stop')
 
     return [{'ip': client[1].psrc, 'mac': client[1].hwsrc} for client in clients]
+"""
 
 def ndp_scan(ipv6_prefix, progress_callback=None) -> list:
     ''' Active NDP/NS scan. Send a neighbor solicitation for each addr in <ipv6_prefix>, and return results.
@@ -148,7 +157,6 @@ def ndp_scan(ipv6_prefix, progress_callback=None) -> list:
 
     logging.info(results)
     return results
-
 
 
 def ping_host(ip_addrs: list, progress_callback=None, interface=None, stop_event=None) -> dict:
@@ -227,6 +235,8 @@ def ping_host(ip_addrs: list, progress_callback=None, interface=None, stop_event
                 resp = scapy.sr1(pkt, timeout = DEFAULT_TIMEOUT, iface=interface)
                 if resp:
                     rt_time = resp[1].time - pkt[0].sent_time #same as above, just not rounded
+                else:
+                    rt_time = None
 
         # Record results
         results[addr] = rt_time * 1000 if rt_time else None
@@ -249,7 +259,7 @@ def ping_host(ip_addrs: list, progress_callback=None, interface=None, stop_event
 
 ## SNIFFERS ##
 
-def sniff_arp(stop_event, interface=None, lock=None) -> None:
+def sniff_arp(stop_event: threading.Event, interface=None, lock=None) -> None:
     ''' Sniff for ARP packets, grab any MACs + IPs seen. '''
 
     def sniff_arp(stop_event, interface):
@@ -398,8 +408,10 @@ def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
     target_ip = target_ip
     addr_version = ipaddress.ip_address(target_ip).version
     active_ports = []
-    ports = [22, 23, 25, 69, 80, 443]
+
     ports_dict = {
+        20: 'ftp data',
+        21: 'ftp control',
         22: 'ssh',
         23: 'telnet',
         25: 'smtp',
@@ -408,19 +420,46 @@ def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
         68: 'dhcp',
         69: 'tftp',
         80: 'http',
+        88: 'kerberos',
+        110: 'pop3',
+        123: 'ntp',
+        135: 'rpc',
+        137: 'netbios',
         139: 'smb netbios',
         143: 'imap',
+        179: 'bgp',
         389: 'ldap',
         443: 'https',
         445: 'smb',
+        530: 'rpc',
+        546: 'dhcpv6 client',
+        547: 'dhcpv6 server',
+        554: 'rtsp',
+        631: 'ipp/cups',
         636: 'ldaps',
+        853: 'DoT',
+        860: 'iSCSI',
+        993: 'imaps',
+        1433: 'ms sql',
+        1434: 'ms sql admin',
+        1812: 'radius',
+        1883: 'mqtt',
+        2049: 'nfs',
+        2382: 'ms sql browser service',
+        3020: 'cifs',
+        3128: 'proxy', #squid
         3142: 'proxy', #common port for squid/apt-cacher-ng etc
+        3306: 'mysql',
         3389: 'rdp',
+        4022: 'ms sql server service broker',
         5380: 'technitium web interface http',
-        53443: 'technitium web interface https',
+        5060: 'sip', # Can also use UDP
+        6514: 'syslog tls',
+        8080: 'proxy', #/alternate http
         8291: 'winbox',
         8728: 'routeros api',
         8729: 'routeros api ssl',
+        53443: 'technitium web interface https',
 
     }
     num_ports = len(ports_dict)
@@ -432,7 +471,9 @@ def tcp_syn_scan(target_ip=None, progress_callback=None, stop_event=None):
         if stop_event and stop_event.is_set():
             if progress_callback:
                 progress_callback(i+1, num_ports, 'TCP SYN scan STOPPED.', 'determinate')
-            return
+            #return
+            break
+
         # progress callback
         if progress_callback:
             progress_callback(i+1, num_ports, 'TCP SYN scan...', 'determinate')
@@ -880,7 +921,7 @@ def main(ip_range, progress_callback=None, stop_event=None, interface=None) -> N
         progress_callback(0, total_hosts, 'Resolve hostnames..', 'determinate')
 
     # # # for NEW threaded hostnames - TESTING
-    lock = threading.Lock()
+    #lock = threading.Lock()
     threads = []
     # # #
 

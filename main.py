@@ -10,9 +10,11 @@ from tkinter import *
 from tkinter import ttk, messagebox
 import json
 import logging
+from enum import Enum
 
 # Other modules
 import scan
+import config
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -114,11 +116,12 @@ STOP_EVENT = threading.Event() #Pass as stop_filter for scapy.sniff
 class MainWindow():
     ''' Class for the GUI. '''
     def __init__(self):
-        btn_pad = 4 #use to style widgets
-        fontn = ('Cascadia Code', 8)
-        #fontn = ('Fira Code', 8)
-        font_title = ('Aldrich', 10)
-        emerald = '#42e68c'
+        btn_pad = 1 #use to style widgets
+        #fontn = ('Cascadia Code', 8)
+        fontn = (config.FONT_NAME_MAIN, config.FONT_SIZE_MAIN)
+        font_device_list = (config.FONT_NAME_MONO, config.FONT_SIZE_MONO)
+        font_title = (config.FONT_NAME_MAIN, config.FONT_SIZE_TITLE)
+        #emerald = '#42e68c'
         transparent_color = '#123456'
 
         self.root = Tk()
@@ -126,13 +129,25 @@ class MainWindow():
         self.root.maxsize(2160,2560)
         #self.root.wm_attributes('-transparentcolor', transparent_color)
 
-        # import the forest-dark.tcl file
-        #self.root.tk.call("source", "Forest-ttk-theme-1.0/forest-dark.tcl")
-        self.root.tk.call("source", "theme/forest-dark.tcl")
+        if config.DARK_THEME:
+            # import the forest-dark.tcl file
+            #self.root.tk.call("source", "Forest-ttk-theme-1.0/forest-dark.tcl")
+            self.root.tk.call("source", "theme/forest-dark.tcl")
 
         s = ttk.Style()
-        s.theme_use('forest-dark')
+        if config.DARK_THEME:
+            s.theme_use('forest-dark')
         s.configure('.', font=fontn)
+        #s.configure('TButton', font=fontn)
+        #s.configure('TCheckbutton', font=fontn)
+        #s.configure('TCombobox', font=fontn)
+        #s.configure('TEntry', font=fontn)
+        #s.configure('TFrame', font=fontn)
+        #s.configure('TLabel', font=fontn)
+        #s.configure('TLabelFrame', font=fontn)
+        #s.configure('TMenubutton', font=fontn)
+        #s.configure('TRadiobutton', font=fontn)
+        s.configure('Treeview', font=font_device_list)
         s.configure('Treeview.Heading', font=font_title)
 
         # Configure row/column sizes
@@ -147,17 +162,18 @@ class MainWindow():
         #self.device_frame = ttk.Frame(self.root)
         #self.device_frame.grid(row=0, column=0, columnspan=4, sticky='wens')
 
-        # Title image widget
-        self.title_image = PhotoImage(file='logo.png')
-        self.image_label = Label(image=self.title_image)
-        self.image_label.grid(row=0, column=0, columnspan=2, sticky='wns', padx=btn_pad, pady=btn_pad)
+        if config.SHOW_TITLE_IMAGE:
+            # Title image widget
+            self.title_image = PhotoImage(file='logo.png')
+            self.image_label = Label(image=self.title_image)
+            self.image_label.grid(row=0, column=0, columnspan=2, sticky='wns', padx=btn_pad, pady=btn_pad)
 
-        # Extended name on top right corner
-        self.subtitle_label = ttk.Label(self.root, 
-            text='Network Exploration, Tracking, and Remote Activation Interface\nwith Dark-mode for Efficient Reconnaissance',
-            font=(font_title[0], fontn[1]-2),
-            justify='right')
-        self.subtitle_label.grid(row=0, column=2, columnspan=2, sticky='ens', padx=btn_pad, pady=btn_pad)
+            # Extended name on top right corner
+            self.subtitle_label = ttk.Label(self.root, 
+                text='Network Exploration, Tracking, and Remote Activation Interface\nwith Dark-mode for Efficient Reconnaissance',
+                font=(font_title[0], fontn[1]-2),
+                justify='right')
+            self.subtitle_label.grid(row=0, column=2, columnspan=2, sticky='ens', padx=btn_pad, pady=btn_pad)
 
         # Create a tree view to display the device list
         self.tree = ttk.Treeview(self.root, show='headings')
@@ -198,14 +214,14 @@ class MainWindow():
 
         # Combobox to select which IP to scan from
         self.local_ip_addresses = get_local_ips()
-        self.ip_combobox = ttk.Combobox(self.root, values=self.local_ip_addresses)
+        self.ip_combobox = ttk.Combobox(self.root, values=self.local_ip_addresses, font=fontn)
         #self.ip_combobox.set('Network interface:')
         self.ip_combobox.set(self.local_ip_addresses[0])
         self.ip_combobox.grid(row=6, column=2, sticky='news', padx=btn_pad, pady=btn_pad)
 
 
         # Select netmask size
-        self.netmask_spinbox = ttk.Spinbox(self.root, from_=0, to=128, wrap=True)
+        self.netmask_spinbox = ttk.Spinbox(self.root, from_=0, to=128, wrap=True, font=fontn)
         self.netmask_spinbox.set('24')
         self.netmask_spinbox.grid(row=6, column=3, sticky='news', padx=btn_pad, pady=btn_pad)
 
@@ -243,7 +259,7 @@ class MainWindow():
         self.interface_combobox_label.grid(row=11, column=2, sticky='ens', padx=btn_pad, pady=btn_pad)
 
         self.local_net_interfaces = [_ for _ in get_local_interfaces()]
-        self.interface_combobox = ttk.Combobox(self.root, values=self.local_net_interfaces)
+        self.interface_combobox = ttk.Combobox(self.root, values=self.local_net_interfaces, font=fontn)
         self.interface_combobox.grid(row=11, column=3, columnspan=1, sticky='news', padx=btn_pad, pady=btn_pad)
         self.interface_combobox.bind("<<ComboboxSelected>>", self.get_interface_selection)
 
@@ -270,7 +286,7 @@ class MainWindow():
 
     #TESTING
     def get_interface_selection(self, event) -> None:
-        ''' Get info of selected interface from interface_combobox. For testing/debugging. 
+        ''' Get + print info of selected interface from interface_combobox. For testing/debugging. 
         Bind to ComboboxSelected event (i.e. when an item is selected) '''
         x = self.interface_combobox.get()
         # Print selection and its IP
@@ -322,7 +338,7 @@ class MainWindow():
                     ip_addr = self.tree.item(selected_item, "values")[2]
                     # If no IPv4 addr, try IPv6
                     if not ip_addr or ip_addr == '0.0.0.0':
-                        ip_addr = self.tree.item(selected_item, "values")[5]
+                        ip_addr = self.tree.item(selected_item, "values")[5] #v6
                     # Lookup hostname
                     try:
                         hostname = socket.gethostbyaddr(ip_addr)[0]
@@ -484,13 +500,15 @@ class MainWindow():
             case 1:
                 # Read input from subnet input Entry boxes
                 subnet_cidr = f'{self.ip_combobox.get()}/{self.netmask_spinbox.get()}'
-                # Show error if invalid subnet
+                # Validate + Show error if invalid subnet
                 try:
                     _net = ipaddress.ip_network(subnet_cidr, strict=False)
                 except Exception as e:
                     messagebox.showerror('Error', 
                     f'Subnet input is probably invalid. \n\nThe following exception occured while attempting to create an instance of ipaddress.ip_network(subnet_cidr, strict=False): \n\n{str(e)}',
                     )
+                    logging.error(f'{str(e)}')
+                    return
 
                 ip_addrs = [format(host) for host in _net.hosts()]
                 for _ in ip_addrs:
@@ -534,6 +552,8 @@ class MainWindow():
             _net = ipaddress.ip_network(subnet_cidr, strict=False)
         except Exception as e:
             messagebox.showerror('Error', str(e))
+            logging.error(f'{str(e)}')
+            return
 
         # Discourage IPv6 scan if attempted, but do it if sure.
         if _net.version == 6:
@@ -677,15 +697,21 @@ class MainWindow():
         self.tree.heading(col, command=lambda: self.sort_treeview(col, not reverse))
 
 
-    def progress_callback(self, progress, total, msg, _mode) -> None:
+    class ProgressBarMode(Enum):
+        ''' Allowed values for param `mode` of progress_callback. '''
+        DETERMINATE = 'determinate'
+        INDETERMINATE = 'indeterminate'
+        STOP = 'stop'
+
+    def progress_callback(self, progress: int, total: int, msg: str, _mode: ProgressBarMode) -> None:
         ''' Callback to update progress bar. Intended to be passed to other functions in scan.py 
         module when calling them, so they have a means to provide feedback. 
         Moved from scan_button_callback. 
         Args:
-        progress: Current progress.
-        total: Max progress.
-        msg: Text to display on label.
-        mode: progressbar mode- determinate/indeterminate, or "stop" to stop an indeterminate one that's been start()-ed. 
+            progress: Current progress.
+            total: Max progress.
+            msg: Text to display on label.
+            mode: progressbar mode- determinate/indeterminate, or "stop" to stop an indeterminate one that's been start()-ed. 
         '''
 
         match _mode:
