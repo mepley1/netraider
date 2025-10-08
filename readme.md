@@ -3,7 +3,7 @@
 ## Network Exploration, Tracking, and Remote Activation Interface 
 ### *for Efficient Reconnaissance*
 
-GUI network recon + wake-on-lan tool, with active ARP/NDP/ping scanner, passive ARP/NDP/IP sniffer.
+GUI network recon + wake-on-lan tool, with active ARP/NDP/ping scanner, port scanner, passive ARP/NDP/IP sniffer.
 
 Discover and track hosts on network, and send wake-on-lan packets to wake capable devices.
 
